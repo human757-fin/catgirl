@@ -7,6 +7,15 @@ import database
 
 SUGGESTIONS_PER_PAGE = 8
 DISPLAY_TEXT_LIMIT = 380
+OWN_SUGGESTIONS_PER_PAGE = 8
+OWN_DISPLAY_TEXT_LIMIT = 220
+DISPLAY_NOTE_LIMIT = 150
+STATUS_LABELS = {
+    "pending": "Pending review",
+    "approved": "Approved",
+    "denied": "Denied",
+    "implemented": "Implemented",
+}
 
 
 def can_review_suggestions():
@@ -30,7 +39,9 @@ class Suggestions(commands.Cog):
 
     @app_commands.command(name="suggest", description="Suggest a feature for the bot")
     @app_commands.guild_only()
-    @app_commands.describe(idea="Describe the feature you'd like to see (up to 1000 characters)")
+    @app_commands.describe(
+        idea="Describe the feature you'd like to see (up to 1000 characters)"
+    )
     async def suggest(self, interaction: discord.Interaction, idea: str):
         idea = idea.strip()
         if not idea:
@@ -92,7 +103,8 @@ class Suggestions(commands.Cog):
                 if len(text) > DISPLAY_TEXT_LIMIT:
                     text = text[:DISPLAY_TEXT_LIMIT].rstrip() + "…"
                 entries.append(
-                    f"**#{item['id']} · {submitter}** · {item['created_at']}\n{text}"
+                    f"**#{item['id']} · {submitter} · {STATUS_LABELS[item['status']]}** "
+                    f"· {item['created_at']}\n{text}"
                 )
             embed.description = "\n\n".join(entries)
 
@@ -100,6 +112,133 @@ class Suggestions(commands.Cog):
             embed=embed,
             ephemeral=True,
             allowed_mentions=discord.AllowedMentions.none(),
+        )
+
+    @app_commands.command(
+        name="mysuggestions", description="Check the status of your feature suggestions"
+    )
+    @app_commands.guild_only()
+    @app_commands.describe(page="Page number, with your newest suggestions first")
+    async def my_suggestions(
+        self,
+        interaction: discord.Interaction,
+        page: app_commands.Range[int, 1, 10000] = 1,
+    ):
+        guild_id = interaction.guild_id
+        total = database.count_user_suggestions(guild_id, interaction.user.id)
+        page_count = max(
+            1, (total + OWN_SUGGESTIONS_PER_PAGE - 1) // OWN_SUGGESTIONS_PER_PAGE
+        )
+        if page > page_count:
+            return await interaction.response.send_message(
+                f"You have {total} suggestion(s) across {page_count} page(s).",
+                ephemeral=True,
+            )
+
+        suggestions = database.get_user_suggestions(
+            guild_id,
+            interaction.user.id,
+            OWN_SUGGESTIONS_PER_PAGE,
+            (page - 1) * OWN_SUGGESTIONS_PER_PAGE,
+        )
+        embed = discord.Embed(
+            title=f"Your suggestions · page {page}/{page_count}",
+            color=0xFF9ECF,
+        )
+        if not suggestions:
+            embed.description = "You haven't submitted any feature suggestions yet."
+        else:
+            entries = []
+            for item in suggestions:
+                text = item["suggestion"]
+                if len(text) > OWN_DISPLAY_TEXT_LIMIT:
+                    text = text[:OWN_DISPLAY_TEXT_LIMIT].rstrip() + "…"
+                entry = (
+                    f"**#{item['id']} · {STATUS_LABELS[item['status']]}** "
+                    f"· {item['created_at']}\n{text}"
+                )
+                if item["status"] == "denied" and item["status_note"]:
+                    note = item["status_note"]
+                    if len(note) > DISPLAY_NOTE_LIMIT:
+                        note = note[:DISPLAY_NOTE_LIMIT].rstrip() + "…"
+                    entry += f"\nReviewer note: {note}"
+                entries.append(entry)
+            embed.description = "\n\n".join(entries)
+
+        await interaction.response.send_message(
+            embed=embed,
+            ephemeral=True,
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
+
+    @app_commands.command(
+        name="suggestion-status", description="Update a feature suggestion's status"
+    )
+    @app_commands.guild_only()
+    @app_commands.describe(
+        suggestion_id="ID shown by /suggestions",
+        status="New status",
+        note="Optional reviewer note; included in a denial DM",
+    )
+    @app_commands.choices(
+        status=[
+            app_commands.Choice(name="Pending", value="pending"),
+            app_commands.Choice(name="Approved", value="approved"),
+            app_commands.Choice(name="Denied", value="denied"),
+            app_commands.Choice(name="Implemented", value="implemented"),
+        ]
+    )
+    @can_review_suggestions()
+    async def update_status(
+        self,
+        interaction: discord.Interaction,
+        suggestion_id: app_commands.Range[int, 1, 2147483647],
+        status: app_commands.Choice[str],
+        note: str | None = None,
+    ):
+        if note and len(note) > 500:
+            return await interaction.response.send_message(
+                "Reviewer notes must be 500 characters or fewer.", ephemeral=True
+            )
+
+        item = database.set_suggestion_status(
+            interaction.guild_id,
+            suggestion_id,
+            status.value,
+            note.strip() if note else None,
+            interaction.user.id,
+        )
+        if item is None:
+            return await interaction.response.send_message(
+                f"Suggestion `#{suggestion_id}` wasn't found in this server.",
+                ephemeral=True,
+            )
+
+        notification_result = ""
+        if status.value == "denied" and item["previous_status"] != "denied":
+            try:
+                submitter = self.bot.get_user(item["user_id"])
+                if submitter is None:
+                    submitter = await self.bot.fetch_user(item["user_id"])
+                message = (
+                    f"Your feature suggestion `#{suggestion_id}` in "
+                    f"**{interaction.guild.name}** was denied."
+                )
+                if item["status_note"]:
+                    message += f"\n\nReviewer note: {item['status_note']}"
+                await submitter.send(
+                    message, allowed_mentions=discord.AllowedMentions.none()
+                )
+                notification_result = " The submitter was notified by DM."
+            except discord.HTTPException:
+                notification_result = (
+                    " I couldn't DM the submitter; they may have DMs disabled."
+                )
+
+        await interaction.response.send_message(
+            f"Suggestion `#{suggestion_id}` is now **{STATUS_LABELS[status.value]}**."
+            f"{notification_result}",
+            ephemeral=True,
         )
 
     async def cog_app_command_error(
