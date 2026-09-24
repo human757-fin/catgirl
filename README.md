@@ -39,7 +39,7 @@ Moderators with the corresponding Discord permissions can use `/ban`, `/kick`, `
 ### Utilities
 
 - `!ping` and `/ping` show the bot's latency.
-- `!sync` syncs application commands to the current server. Use `!sync global` to sync globally or `!sync clear` to clear this server's command copies. The sync command is limited to the bot owner, server owner, and configured admin role.
+- `!sync` removes this server's command-specific copies to prevent duplicates alongside global commands. Use `!sync global` to publish the current application commands globally; use `!sync clear` as an explicit alias for removing this server's copies. The sync command is limited to the bot owner, server owner, and configured admin role.
 
 ## Project layout
 

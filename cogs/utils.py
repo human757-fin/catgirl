@@ -26,7 +26,7 @@ class Utils(commands.Cog):
         scope: Optional[Literal["guild", "global", "clear"]] = "guild",  # noqa: UP045
     ):
         """
-        !sync          -> sync to this server (instant)
+        !sync          -> remove this server's command copies (prevents duplicates)
         !sync guild    -> same as above
         !sync global   -> sync to all servers (can take up to an hour to appear)
         !sync clear    -> remove this server's copy of commands
@@ -35,15 +35,20 @@ class Utils(commands.Cog):
             synced = await self.bot.tree.sync()
             await ctx.send(f"Synced {len(synced)} commands globally.")
 
+        elif ctx.guild is None:
+            await ctx.send("Run this command in a server.")
+
         elif scope == "clear":
             self.bot.tree.clear_commands(guild=ctx.guild)
             await self.bot.tree.sync(guild=ctx.guild)
             await ctx.send("Cleared this server's commands.")
 
-        else:  # guild
-            self.bot.tree.copy_global_to(guild=ctx.guild)
-            synced = await self.bot.tree.sync(guild=ctx.guild)
-            await ctx.send(f"Synced {len(synced)} commands to this server.")
+        else:  # guild, the default
+            self.bot.tree.clear_commands(guild=ctx.guild)
+            await self.bot.tree.sync(guild=ctx.guild)
+            await ctx.send(
+                "Removed this server's command copies. Global commands remain available."
+            )
 
     @sync.error
     async def sync_error(self, ctx, error):
