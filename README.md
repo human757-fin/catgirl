@@ -41,6 +41,11 @@ Moderators with the corresponding Discord permissions can use `/ban`, `/kick`, `
 - `!ping` and `/ping` show the bot's latency.
 - `!sync dev` copies the current application commands to this server for fast testing. It can show duplicate entries while global commands also exist. Use `!sync clear` to remove this server's copies when testing is done; global commands remain available. `!sync global` publishes the current application commands globally and may take up to an hour to appear. Bare `!sync` is an alias for `!sync clear`. The sync command is limited to the bot owner, server owner, and configured admin role.
 
+### Feature suggestions
+
+- `/suggest idea` lets any server member submit a feature idea. Suggestions are saved in the local SQLite database and scoped to the server they came from.
+- `/suggestions` privately lists suggestions, newest first, eight per page. Add the `page` option to browse older suggestions. Only the bot owner, server owner, and configured admin role can review them.
+
 ## Project layout
 
 - `bot.py` — bot startup, intents, SQLite initialization, and cog loading.
