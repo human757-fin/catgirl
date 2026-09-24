@@ -122,6 +122,30 @@ def get_suggestions(guild_id: int, limit: int, offset: int) -> list[dict]:
     return [dict(row) for row in rows]
 
 
+def count_public_features(guild_id: int) -> int:
+    with closing(_connect()) as connection, connection:
+        row = connection.execute(
+            """SELECT COUNT(*) AS total FROM feature_suggestions
+            WHERE guild_id = ? AND status IN ('approved', 'implemented')""",
+            (guild_id,),
+        ).fetchone()
+    return row["total"]
+
+
+def get_public_features(guild_id: int, limit: int, offset: int) -> list[dict]:
+    with closing(_connect()) as connection, connection:
+        rows = connection.execute(
+            """SELECT id, suggestion, status, status_updated_at
+            FROM feature_suggestions
+            WHERE guild_id = ? AND status IN ('approved', 'implemented')
+            ORDER BY CASE status WHEN 'approved' THEN 0 ELSE 1 END,
+                COALESCE(status_updated_at, created_at) DESC, id DESC
+            LIMIT ? OFFSET ?""",
+            (guild_id, limit, offset),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def count_user_suggestions(guild_id: int, user_id: int) -> int:
     with closing(_connect()) as connection, connection:
         row = connection.execute(
