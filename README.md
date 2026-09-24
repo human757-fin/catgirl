@@ -44,7 +44,9 @@ Moderators with the corresponding Discord permissions can use `/ban`, `/kick`, `
 ### Feature suggestions
 
 - `/suggest idea` lets any server member submit a feature idea. Suggestions are saved in the local SQLite database and scoped to the server they came from.
-- `/suggestions` privately lists suggestions, newest first, eight per page. Add the `page` option to browse older suggestions. Only the bot owner, server owner, and configured admin role can review them.
+- `/suggestions` privately lists suggestions and their statuses, newest first, eight per page. Add the `page` option to browse older suggestions. Only the bot owner, server owner, and configured admin role can review them.
+- `/mysuggestions` privately lists your own submissions and statuses.
+- `/suggestion-status` lets reviewers mark a suggestion pending, approved, denied, or implemented. Setting a suggestion to denied sends its author a private DM, including an optional reviewer note. If the author has DMs disabled, the command reports that the notification could not be delivered.
 
 ## Project layout
 
