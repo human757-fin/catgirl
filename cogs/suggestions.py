@@ -16,6 +16,28 @@ STATUS_LABELS = {
     "denied": "Denied",
     "implemented": "Implemented",
 }
+BUILT_IN_FEATURES = [
+    (
+        "Built-in · Moderation",
+        "`/ban`, `/kick`, and `/unban` help authorized moderators manage server membership.",
+    ),
+    (
+        "Built-in · Timeouts",
+        "`/timeout` and `/untimeout` let authorized moderators apply or remove member timeouts.",
+    ),
+    (
+        "Built-in · Welcome embeds",
+        "The bot posts a welcome embed when someone joins. Server admins can set its channel, text, title, and color with `/welcome`.",
+    ),
+    (
+        "Built-in · Bot latency",
+        "Use `/ping` or `!ping` to check the bot's response latency.",
+    ),
+    (
+        "Built-in · Feature suggestions",
+        "Members can submit ideas with `/suggest` and check their review status with `/mysuggestions`.",
+    ),
+]
 
 
 def can_review_suggestions():
@@ -125,31 +147,40 @@ class Suggestions(commands.Cog):
         page: app_commands.Range[int, 1, 10000] = 1,
     ):
         guild_id = interaction.guild_id
-        total = database.count_public_features(guild_id)
+        total = len(BUILT_IN_FEATURES) + database.count_public_features(guild_id)
         page_count = max(1, (total + SUGGESTIONS_PER_PAGE - 1) // SUGGESTIONS_PER_PAGE)
         if page > page_count:
             return await interaction.response.send_message(
-                f"There are {total} approved or implemented feature(s) across "
-                f"{page_count} page(s).",
+                f"There are {total} features across {page_count} page(s).",
                 ephemeral=True,
             )
 
-        features = database.get_public_features(
-            guild_id,
-            SUGGESTIONS_PER_PAGE,
-            (page - 1) * SUGGESTIONS_PER_PAGE,
-        )
+        offset = (page - 1) * SUGGESTIONS_PER_PAGE
+        page_items = BUILT_IN_FEATURES[offset : offset + SUGGESTIONS_PER_PAGE]
+        if offset + SUGGESTIONS_PER_PAGE > len(BUILT_IN_FEATURES):
+            dynamic_offset = max(0, offset - len(BUILT_IN_FEATURES))
+            dynamic_limit = SUGGESTIONS_PER_PAGE - len(page_items)
+            features = database.get_public_features(
+                guild_id, dynamic_limit, dynamic_offset
+            )
+            for feature in features:
+                page_items.append(
+                    (
+                        STATUS_LABELS[feature["status"]],
+                        feature["suggestion"],
+                    )
+                )
+
         embed = discord.Embed(
             title=f"Bot features · page {page}/{page_count}",
             color=0xFF9ECF,
         )
-        if not features:
-            embed.description = "No features have been approved or implemented yet."
+        if not page_items:
+            embed.description = "No features are listed yet."
         else:
             entries = []
-            for feature in features:
-                status = STATUS_LABELS[feature["status"]]
-                text = feature["suggestion"]
+            for status, feature_text in page_items:
+                text = feature_text
                 if len(text) > DISPLAY_TEXT_LIMIT:
                     text = text[:DISPLAY_TEXT_LIMIT].rstrip() + "…"
                 entries.append(f"**{status}** · {text}")

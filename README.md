@@ -47,7 +47,7 @@ Moderators with the corresponding Discord permissions can use `/ban`, `/kick`, `
 - `/suggestions` privately lists suggestions and their statuses, newest first, eight per page. Add the `page` option to browse older suggestions. Only the bot owner, server owner, and configured admin role can review them.
 - `/mysuggestions` privately lists your own submissions and statuses.
 - `/suggestion-status` lets reviewers mark a suggestion pending, approved, denied, or implemented. Setting a suggestion to denied sends its author a private DM, including an optional reviewer note. If the author has DMs disabled, the command reports that the notification could not be delivered.
-- `/features` publicly lists approved and implemented suggestions so the whole server can see planned and completed bot features.
+- `/features` publicly lists built-in user-facing capabilities and community suggestions marked approved or implemented. It covers moderation, welcome embeds, ping, and suggestions; admin-only maintenance commands are excluded.
 
 ## Project layout
 
