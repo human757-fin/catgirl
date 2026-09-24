@@ -122,12 +122,5 @@ class Welcome(commands.Cog):
         else:
             raise error
 
-    async def cog_load(self):
-        self.bot.tree.add_command(self.welcome)
-
-    async def cog_unload(self):
-        self.bot.tree.remove_command(self.welcome.name, type=self.welcome.type)
-
-
 async def setup(bot):
     await bot.add_cog(Welcome(bot))
