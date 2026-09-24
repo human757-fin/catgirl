@@ -23,11 +23,11 @@ class Utils(commands.Cog):
     async def sync(
         self,
         ctx: commands.Context,
-        scope: Optional[Literal["guild", "global", "clear"]] = "guild",  # noqa: UP045
+        scope: Optional[Literal["dev", "global", "clear"]] = "clear",  # noqa: UP045
     ):
         """
-        !sync          -> remove this server's command copies (prevents duplicates)
-        !sync guild    -> same as above
+        !sync          -> clear this server's command copies
+        !sync dev      -> sync commands to this server for fast testing
         !sync global   -> sync to all servers (can take up to an hour to appear)
         !sync clear    -> remove this server's copy of commands
         """
@@ -38,16 +38,19 @@ class Utils(commands.Cog):
         elif ctx.guild is None:
             await ctx.send("Run this command in a server.")
 
-        elif scope == "clear":
-            self.bot.tree.clear_commands(guild=ctx.guild)
-            await self.bot.tree.sync(guild=ctx.guild)
-            await ctx.send("Cleared this server's commands.")
+        elif scope == "dev":
+            self.bot.tree.copy_global_to(guild=ctx.guild)
+            synced = await self.bot.tree.sync(guild=ctx.guild)
+            await ctx.send(
+                f"Synced {len(synced)} commands to this dev server. "
+                "Use `!sync clear` when you're done testing."
+            )
 
-        else:  # guild, the default
+        else:  # clear, also the default
             self.bot.tree.clear_commands(guild=ctx.guild)
             await self.bot.tree.sync(guild=ctx.guild)
             await ctx.send(
-                "Removed this server's command copies. Global commands remain available."
+                "Cleared this server's command copies. Global commands remain available."
             )
 
     @sync.error
