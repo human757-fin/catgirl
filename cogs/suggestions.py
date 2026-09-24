@@ -115,6 +115,53 @@ class Suggestions(commands.Cog):
         )
 
     @app_commands.command(
+        name="features", description="See approved and implemented bot features"
+    )
+    @app_commands.guild_only()
+    @app_commands.describe(page="Page number")
+    async def list_features(
+        self,
+        interaction: discord.Interaction,
+        page: app_commands.Range[int, 1, 10000] = 1,
+    ):
+        guild_id = interaction.guild_id
+        total = database.count_public_features(guild_id)
+        page_count = max(1, (total + SUGGESTIONS_PER_PAGE - 1) // SUGGESTIONS_PER_PAGE)
+        if page > page_count:
+            return await interaction.response.send_message(
+                f"There are {total} approved or implemented feature(s) across "
+                f"{page_count} page(s).",
+                ephemeral=True,
+            )
+
+        features = database.get_public_features(
+            guild_id,
+            SUGGESTIONS_PER_PAGE,
+            (page - 1) * SUGGESTIONS_PER_PAGE,
+        )
+        embed = discord.Embed(
+            title=f"Bot features · page {page}/{page_count}",
+            color=0xFF9ECF,
+        )
+        if not features:
+            embed.description = "No features have been approved or implemented yet."
+        else:
+            entries = []
+            for feature in features:
+                status = STATUS_LABELS[feature["status"]]
+                text = feature["suggestion"]
+                if len(text) > DISPLAY_TEXT_LIMIT:
+                    text = text[:DISPLAY_TEXT_LIMIT].rstrip() + "…"
+                entries.append(f"**{status}** · {text}")
+            embed.description = "\n\n".join(entries)
+
+        await interaction.response.send_message(
+            embed=embed,
+            ephemeral=False,
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
+
+    @app_commands.command(
         name="mysuggestions", description="Check the status of your feature suggestions"
     )
     @app_commands.guild_only()
