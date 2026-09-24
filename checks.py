@@ -1,6 +1,7 @@
 # checks.py
-import config
 from discord.ext import commands
+
+import config
 
 
 def is_bot_admin():
@@ -15,4 +16,5 @@ def is_bot_admin():
             return True
         # Anyone with the admin role
         return any(role.id == config.ADMIN_ROLE_ID for role in ctx.author.roles)
+
     return commands.check(predicate)

@@ -13,3 +13,7 @@ wheels/
 .env
 *.env
 .env.*
+
+# Local server settings
+catgirl.sqlite3
+catgirl.sqlite3-*
